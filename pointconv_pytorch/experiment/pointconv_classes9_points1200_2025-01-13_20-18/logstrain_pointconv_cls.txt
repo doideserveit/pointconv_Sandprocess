@@ -1,0 +1,122 @@
+2025-01-13 20:18:02,072 - pointconv - INFO - ---------------------------------------------------TRANING---------------------------------------------------
+2025-01-13 20:18:02,072 - pointconv - INFO - PARAMETER ...
+2025-01-13 20:18:02,072 - pointconv - INFO - Namespace(batchsize=50, epoch=20, learning_rate=0.001, gpu='0', num_point=1200, num_workers=16, optimizer='SGD', pretrain=None, decay_rate=0.0001, model_name='pointconv', normal=True, num_classes=9, train_path='I:/sandprocess/data/originbad/fps_subsets/train', test_path='I:/sandprocess/data/originbad/fps_subsets/test')
+2025-01-13 20:18:02,072 - pointconv - INFO - Load dataset ...
+2025-01-13 20:18:02,075 - pointconv - INFO - Training samples: 8, Testing samples: 8
+2025-01-13 20:18:03,044 - pointconv - INFO - Start training...
+2025-01-13 20:18:03,044 - pointconv - INFO - Epoch 1 (1/20):
+2025-01-13 20:18:08,033 - pointconv - INFO - Train Accuracy: 0.250000
+2025-01-13 20:18:12,547 - pointconv - INFO - Loss: 2.09
+2025-01-13 20:18:12,547 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.000000
+2025-01-13 20:18:12,547 - pointconv - INFO - Epoch 1 completed in 9.50s at 2025-01-13 20:18:12.
+2025-01-13 20:18:12,547 - pointconv - INFO - Epoch 2 (2/20):
+2025-01-13 20:18:17,188 - pointconv - INFO - Train Accuracy: 0.000000
+2025-01-13 20:18:21,926 - pointconv - INFO - Loss: 2.66
+2025-01-13 20:18:21,926 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.000000
+2025-01-13 20:18:21,926 - pointconv - INFO - Epoch 2 completed in 9.38s at 2025-01-13 20:18:21.
+2025-01-13 20:18:21,926 - pointconv - INFO - Epoch 3 (3/20):
+2025-01-13 20:18:26,657 - pointconv - INFO - Train Accuracy: 0.000000
+2025-01-13 20:18:31,312 - pointconv - INFO - Loss: 2.15
+2025-01-13 20:18:31,312 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.000000
+2025-01-13 20:18:31,312 - pointconv - INFO - Epoch 3 completed in 9.39s at 2025-01-13 20:18:31.
+2025-01-13 20:18:31,312 - pointconv - INFO - Epoch 4 (4/20):
+2025-01-13 20:18:35,952 - pointconv - INFO - Train Accuracy: 0.250000
+2025-01-13 20:18:40,515 - pointconv - INFO - Loss: 1.86
+2025-01-13 20:18:40,515 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.000000
+2025-01-13 20:18:40,515 - pointconv - INFO - Epoch 4 completed in 9.20s at 2025-01-13 20:18:40.
+2025-01-13 20:18:40,517 - pointconv - INFO - Epoch 5 (5/20):
+2025-01-13 20:18:45,325 - pointconv - INFO - Train Accuracy: 0.125000
+2025-01-13 20:18:50,211 - pointconv - INFO - Loss: 2.06
+2025-01-13 20:18:50,212 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.000000
+2025-01-13 20:18:50,212 - pointconv - INFO - Epoch 5 completed in 9.69s at 2025-01-13 20:18:50.
+2025-01-13 20:18:50,212 - pointconv - INFO - Epoch 6 (6/20):
+2025-01-13 20:18:54,874 - pointconv - INFO - Train Accuracy: 0.375000
+2025-01-13 20:18:59,451 - pointconv - INFO - Loss: 1.75
+2025-01-13 20:18:59,451 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.000000
+2025-01-13 20:18:59,451 - pointconv - INFO - Epoch 6 completed in 9.24s at 2025-01-13 20:18:59.
+2025-01-13 20:18:59,451 - pointconv - INFO - Epoch 7 (7/20):
+2025-01-13 20:19:04,279 - pointconv - INFO - Train Accuracy: 0.250000
+2025-01-13 20:19:09,134 - pointconv - INFO - Save model...
+2025-01-13 20:19:09,517 - pointconv - INFO - Loss: 2.05
+2025-01-13 20:19:09,517 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:19:09,517 - pointconv - INFO - Epoch 7 completed in 10.07s at 2025-01-13 20:19:09.
+2025-01-13 20:19:09,517 - pointconv - INFO - Epoch 8 (8/20):
+2025-01-13 20:19:14,328 - pointconv - INFO - Train Accuracy: 0.000000
+2025-01-13 20:19:19,287 - pointconv - INFO - Save model...
+2025-01-13 20:19:19,643 - pointconv - INFO - Loss: 2.02
+2025-01-13 20:19:19,643 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:19:19,643 - pointconv - INFO - Epoch 8 completed in 10.13s at 2025-01-13 20:19:19.
+2025-01-13 20:19:19,643 - pointconv - INFO - Epoch 9 (9/20):
+2025-01-13 20:19:24,490 - pointconv - INFO - Train Accuracy: 0.125000
+2025-01-13 20:19:29,207 - pointconv - INFO - Save model...
+2025-01-13 20:19:29,572 - pointconv - INFO - Loss: 1.98
+2025-01-13 20:19:29,572 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:19:29,572 - pointconv - INFO - Epoch 9 completed in 9.93s at 2025-01-13 20:19:29.
+2025-01-13 20:19:29,572 - pointconv - INFO - Epoch 10 (10/20):
+2025-01-13 20:19:34,307 - pointconv - INFO - Train Accuracy: 0.375000
+2025-01-13 20:19:38,983 - pointconv - INFO - Save model...
+2025-01-13 20:19:39,352 - pointconv - INFO - Loss: 1.61
+2025-01-13 20:19:39,352 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:19:39,352 - pointconv - INFO - Epoch 10 completed in 9.78s at 2025-01-13 20:19:39.
+2025-01-13 20:19:39,352 - pointconv - INFO - Epoch 11 (11/20):
+2025-01-13 20:19:44,233 - pointconv - INFO - Train Accuracy: 0.250000
+2025-01-13 20:19:48,795 - pointconv - INFO - Save model...
+2025-01-13 20:19:49,167 - pointconv - INFO - Loss: 2.22
+2025-01-13 20:19:49,167 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:19:49,167 - pointconv - INFO - Epoch 11 completed in 9.82s at 2025-01-13 20:19:49.
+2025-01-13 20:19:49,167 - pointconv - INFO - Epoch 12 (12/20):
+2025-01-13 20:19:53,870 - pointconv - INFO - Train Accuracy: 0.250000
+2025-01-13 20:19:59,089 - pointconv - INFO - Save model...
+2025-01-13 20:19:59,458 - pointconv - INFO - Loss: 1.86
+2025-01-13 20:19:59,458 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:19:59,459 - pointconv - INFO - Epoch 12 completed in 10.29s at 2025-01-13 20:19:59.
+2025-01-13 20:19:59,459 - pointconv - INFO - Epoch 13 (13/20):
+2025-01-13 20:20:04,341 - pointconv - INFO - Train Accuracy: 0.125000
+2025-01-13 20:20:08,892 - pointconv - INFO - Save model...
+2025-01-13 20:20:09,278 - pointconv - INFO - Loss: 1.95
+2025-01-13 20:20:09,278 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:20:09,278 - pointconv - INFO - Epoch 13 completed in 9.82s at 2025-01-13 20:20:09.
+2025-01-13 20:20:09,278 - pointconv - INFO - Epoch 14 (14/20):
+2025-01-13 20:20:13,903 - pointconv - INFO - Train Accuracy: 0.250000
+2025-01-13 20:20:18,495 - pointconv - INFO - Save model...
+2025-01-13 20:20:18,855 - pointconv - INFO - Loss: 1.86
+2025-01-13 20:20:18,856 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:20:18,856 - pointconv - INFO - Epoch 14 completed in 9.58s at 2025-01-13 20:20:18.
+2025-01-13 20:20:18,856 - pointconv - INFO - Epoch 15 (15/20):
+2025-01-13 20:20:23,675 - pointconv - INFO - Train Accuracy: 0.250000
+2025-01-13 20:20:28,240 - pointconv - INFO - Save model...
+2025-01-13 20:20:28,614 - pointconv - INFO - Loss: 1.88
+2025-01-13 20:20:28,614 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:20:28,614 - pointconv - INFO - Epoch 15 completed in 9.76s at 2025-01-13 20:20:28.
+2025-01-13 20:20:28,614 - pointconv - INFO - Epoch 16 (16/20):
+2025-01-13 20:20:33,311 - pointconv - INFO - Train Accuracy: 0.250000
+2025-01-13 20:20:37,982 - pointconv - INFO - Save model...
+2025-01-13 20:20:38,359 - pointconv - INFO - Loss: 2.04
+2025-01-13 20:20:38,359 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:20:38,359 - pointconv - INFO - Epoch 16 completed in 9.75s at 2025-01-13 20:20:38.
+2025-01-13 20:20:38,359 - pointconv - INFO - Epoch 17 (17/20):
+2025-01-13 20:20:43,216 - pointconv - INFO - Train Accuracy: 0.250000
+2025-01-13 20:20:48,264 - pointconv - INFO - Save model...
+2025-01-13 20:20:48,645 - pointconv - INFO - Loss: 1.54
+2025-01-13 20:20:48,645 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:20:48,645 - pointconv - INFO - Epoch 17 completed in 10.29s at 2025-01-13 20:20:48.
+2025-01-13 20:20:48,645 - pointconv - INFO - Epoch 18 (18/20):
+2025-01-13 20:20:53,401 - pointconv - INFO - Train Accuracy: 0.375000
+2025-01-13 20:20:57,962 - pointconv - INFO - Save model...
+2025-01-13 20:20:58,348 - pointconv - INFO - Loss: 2.12
+2025-01-13 20:20:58,348 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:20:58,348 - pointconv - INFO - Epoch 18 completed in 9.70s at 2025-01-13 20:20:58.
+2025-01-13 20:20:58,348 - pointconv - INFO - Epoch 19 (19/20):
+2025-01-13 20:21:03,098 - pointconv - INFO - Train Accuracy: 0.500000
+2025-01-13 20:21:07,680 - pointconv - INFO - Save model...
+2025-01-13 20:21:08,046 - pointconv - INFO - Loss: 1.66
+2025-01-13 20:21:08,046 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:21:08,046 - pointconv - INFO - Epoch 19 completed in 9.70s at 2025-01-13 20:21:08.
+2025-01-13 20:21:08,046 - pointconv - INFO - Epoch 20 (20/20):
+2025-01-13 20:21:12,845 - pointconv - INFO - Train Accuracy: 0.500000
+2025-01-13 20:21:17,680 - pointconv - INFO - Save model...
+2025-01-13 20:21:18,051 - pointconv - INFO - Loss: 1.33
+2025-01-13 20:21:18,051 - pointconv - INFO - Test Accuracy: 0.125000  *** Best Test Accuracy: 0.125000
+2025-01-13 20:21:18,051 - pointconv - INFO - Epoch 20 completed in 10.00s at 2025-01-13 20:21:18.
+2025-01-13 20:21:18,051 - pointconv - INFO - Training completed. Best Test Accuracy: 0.1250
+2025-01-13 20:21:18,051 - pointconv - INFO - End of training...
