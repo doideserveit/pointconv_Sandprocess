@@ -40,8 +40,12 @@ def save_checkpoint(epoch, train_accuracy, test_accuracy, model, optimizer, path
         'test_accuracy': test_accuracy,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
+        'num_classes': model.num_classes,  # 保存类别数
+        'label_map': model.label_map,  # 保存标签映射
+        'classes': model.classes,  # 保存类别信息
     }
     torch.save(state, savepath)
+
 
 def test(model, loader):
     total_correct = 0.0

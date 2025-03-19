@@ -1,8 +1,6 @@
-# 这个版本是20250313基于源代码修改的验证脚本，读取h5数据的
 import argparse
 import os
-import sys
-import numpy as np 
+import time
 import torch
 import torch.nn.parallel
 import torch.utils.data
@@ -14,138 +12,169 @@ from pathlib import Path
 from tqdm import tqdm
 from utils.utils import test, save_checkpoint
 from model.pointconv import PointConvDensityClsSsg as PointConvClsSsg
+import provider
+import numpy as np
 
+data_path = '/share/home/202321008879/data/h5data/originnew_labbotm1k'  # 手动修改
 
 def parse_args():
     '''PARAMETERS'''
-    parser = argparse.ArgumentParser('PointConv Eval')
-    parser.add_argument('--batchsize', type=int, default=32, help='batch size')
+    parser = argparse.ArgumentParser('PointConv')
+    parser.add_argument('--batchsize', type=int, default=50, help='batch size in training')  #
+    parser.add_argument('--epoch', default=100, type=int, help='number of epoch in training')  # 修改epoch从400到200或150
+    parser.add_argument('--learning_rate', default=0.001, type=float, help='learning rate in training')  # 修改学习率由0.001为0.01
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
-    parser.add_argument('--checkpoint', type=str, default=None, help='checkpoint')
-    parser.add_argument('--num_point', type=int, default=1024, help='Point Number [default: 1024]')
+    parser.add_argument('--num_point', type=int, default=1200, help='Point Number [default: 1024]')  # 这个点云数量根据自己的修改
     parser.add_argument('--num_workers', type=int, default=16, help='Worker Number [default: 16]')
-    parser.add_argument('--model_name', default='pointconv', help='model name')
-    parser.add_argument('--normal', action='store_true', default=False, help='Whether to use normal information [default: False]')
-    # 新增数据根目录参数，用于指定存放生成的 h5 数据的目录
-    parser.add_argument('--data_root', type=str, default='./data/origin1k', help='Root directory of the h5 data')
-    # 新增数据集类型参数，用于指定使用的数据集类型
-    parser.add_argument('--split', type=str, default='test', choices=['train', 'val', 'test'], help='Dataset split to use (train, val, test)')
+    parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer for training')
+    parser.add_argument('--pretrain', type=str, default=None, help='whether use pretrain model')
+    parser.add_argument('--decay_rate', type=float, default=1e-4, help='decay rate of learning rate')
+    parser.add_argument('--model_name', default='originnew_labbotm1k', help='model name')
+    parser.add_argument('--normal', action='store_true', default=True, help='Whether to use normal information [default: False]')
+    parser.add_argument('--train_path', type=str, default=data_path, help='Directory containing unified training h5 file')
+    parser.add_argument('--test_path', type=str, default=data_path, help='Directory containing unified testing h5 file')
+    parser.add_argument('--checkpoint', type=str, default=None, help='Path to pre-trained model checkpoint')  # Checkpoint路径
     return parser.parse_args()
 
-def main(args):
-    '''HYPER PARAMETER'''
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
-    '''CREATE DIR for Evaluation Results'''
-    experiment_dir = Path('./eval_experiment/')
+def main(args):
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    '''LOAD DATASET AND OBTAIN NUMBER OF CLASSES'''
+    if args.checkpoint:
+        checkpoint = torch.load(args.checkpoint)
+        num_classes = checkpoint['num_classes']
+        label_map = checkpoint['label_map']
+        logger_info = "Loaded label_map and num_classes from checkpoint."
+        # 注意：使用checkpoint时TRAIN_DATASET需提前加载用以创建DataLoader    
+        TRAIN_DATASET = ModelNetDataLoader(root=args.train_path, npoint=args.num_point, split='train', normal_channel=args.normal, label_map=label_map, num_classes=num_classes)
+    else:
+        TRAIN_DATASET = ModelNetDataLoader(root=args.train_path, npoint=args.num_point, split='train', normal_channel=args.normal)
+        num_classes = len(TRAIN_DATASET.classes)
+        label_map = TRAIN_DATASET.label_map
+        logger_info = f"Detected {num_classes} classes from training data."
+    TEST_DATASET = ModelNetDataLoader(root=args.test_path, npoint=args.num_point, split='test', normal_channel=args.normal, label_map=label_map, num_classes=num_classes)
+    
+    '''CREATE DIR'''
+    experiment_dir = Path('./experiment/')
     experiment_dir.mkdir(exist_ok=True)
-    file_dir = Path(str(experiment_dir) + f'/{args.model_name}_Eval-' + str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')))
+    file_dir = Path(str(experiment_dir) + f'/{args.model_name}_classes{args.num_classes}_points{args.num_point}_' +
+                    str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')))
     file_dir.mkdir(exist_ok=True)
     checkpoints_dir = file_dir.joinpath('checkpoints/')
     checkpoints_dir.mkdir(exist_ok=True)
-    os.system('cp %s %s' % (args.checkpoint, checkpoints_dir))
     log_dir = file_dir.joinpath('logs/')
     log_dir.mkdir(exist_ok=True)
-
+    
     '''LOG'''
     logger = logging.getLogger(args.model_name)
     logger.setLevel(logging.INFO)
+    logger.info("Label mapping (original -> mapped): %s", str(TRAIN_DATASET.label_map))
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler(str(log_dir) + f'/eval_{args.model_name}_cls.txt')
+    file_handler = logging.FileHandler(str(log_dir) + f'/train_{args.model_name}_cls.txt')
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-    logger.info('---------------------------------------------------EVAL---------------------------------------------------')
+    logger.info('---------------------------------------------------TRANING---------------------------------------------------')
     logger.info('PARAMETER ...')
     logger.info(args)
-
+    logger.info(logger_info)
+    
     '''DATA LOADING'''
     logger.info('Load dataset ...')
-    DATA_PATH = args.data_root
-
-    TEST_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split=args.split, normal_channel=args.normal)
-    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batchsize, shuffle=False, num_workers=args.num_workers)
-    logger.info("The number of %s data is: %d", args.split, len(TEST_DATASET))
-
-    # 获取反向标签映射，用于将映射后的标签转换回原始标签
-    inverse_label_map = {v: k for k, v in TEST_DATASET.label_map.items()}
-    logger.info("Inverse label mapping: %s", str(inverse_label_map))
-
-    seed = 3
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-
+    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=args.batchsize,
+                                                  shuffle=True, num_workers=args.num_workers)
+    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batchsize,
+                                                 shuffle=False, num_workers=args.num_workers)
+    logger.info(f'Training samples: {len(TRAIN_DATASET)}, Testing samples: {len(TEST_DATASET)}')
+    
     '''MODEL LOADING'''
-    num_class = len(TEST_DATASET.classes)
-    classifier = PointConvClsSsg(num_class).cuda()
-    if args.checkpoint is not None:
-        print('Load CheckPoint...')
-        logger.info('Load CheckPoint')
-        checkpoint = torch.load(args.checkpoint)
+    classifier = PointConvClsSsg(args.num_classes).to(device)
+    if args.pretrain is not None:
+        logger.info('Loading pre-trained model...')
+        checkpoint = torch.load(args.pretrain)
         start_epoch = checkpoint['epoch']
         classifier.load_state_dict(checkpoint['model_state_dict'])
     else:
-        print('Please load Checkpoint to eval...')
-        sys.exit(0)
+        logger.info('No existing model, starting training from scratch...')
+        start_epoch = 0
 
-    blue = lambda x: '\033[94m' + x + '\033[0m'
+    if args.optimizer == 'SGD':
+        optimizer = torch.optim.SGD(classifier.parameters(), lr=args.learning_rate, momentum=0.9)
+    elif args.optimizer == 'Adam':
+        optimizer = torch.optim.Adam(classifier.parameters(), lr=args.learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=args.decay_rate)
+    
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.7)
+    global_epoch = 0
+    best_tst_accuracy = 0.0
 
-    '''EVAL'''
-    logger.info('Start evaluating...')
-    print('Start evaluating...')
+    '''TRAINING'''
+    logger.info('Start training...')
+    for epoch in range(start_epoch, args.epoch):
+        print(f'Epoch {global_epoch + 1} ({epoch + 1}/{args.epoch}):')
+        start_time = time.time()
+        logger.info(f'Epoch {global_epoch + 1} ({epoch + 1}/{args.epoch}):')
+        classifier.train()
+        mean_correct = []
 
-    classifier = classifier.eval()
-    mean_correct = []
-    # 用于记录前几个样本的预测结果和真实标签（反映射回原始标签）
-    sample_pred_orig = []
-    sample_true_orig = []
-    sample_count = 0
+        scheduler.step()
+        for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
+            points, target = data
+            points = points.detach().numpy()
 
-    for batch_id, data in tqdm(enumerate(testDataLoader, 0), total=len(testDataLoader), smoothing=0.9):
-        pointcloud, target = data
-        # target: shape (B, 1) mapped label
-        target = target[:, 0]
+            # 数据增强
+            points[:, :, 0:6] = provider.inject_gaussian_noise(points[:, :, 0:6])
+            points[:, :, 0:6] = provider.rotate_point_cloud_with_normal(points[:, :, 0:6]) 
+            jittered_data = provider.random_scale_point_cloud(points[:, :, 0:3], scale_low=0.95, scale_high=1.05)
+            jittered_data = provider.shift_point_cloud(jittered_data, shift_range=0.2)
+            points[:, :, 0:3] = jittered_data
 
-        points = pointcloud.permute(0, 2, 1)
-        points, target = points.cuda(), target.cuda()
-        with torch.no_grad():
+            points = provider.random_point_dropout_v2(points)
+            points = provider.shuffle_points(points)
+
+            points = torch.Tensor(points).transpose(2, 1).to(device)
+            target = target[:, 0].to(device)
+
+            optimizer.zero_grad()
             pred = classifier(points[:, :3, :], points[:, 3:, :])
-        pred_choice = pred.data.max(1)[1]
-        correct = pred_choice.eq(target.long().data).cpu().sum()
-        mean_correct.append(correct.item() / float(points.size()[0]))
+            loss = F.nll_loss(pred, target.long())
+            pred_choice = pred.data.max(1)[1]
+            correct = pred_choice.eq(target.long().data).cpu().sum()
+            mean_correct.append(correct.item() / float(points.size()[0]))
+            loss.backward()
+            optimizer.step()
 
-        # 保存前几个样本的原始标签值，用于查看验证情况（反映射回原始标签）
-        if sample_count < 10:
-            # 将mapped标签转换为原始标签
-            pred_orig = [inverse_label_map[x.item()] for x in pred_choice]
-            target_orig = [inverse_label_map[x.item()] for x in target]
-            sample_pred_orig.extend(pred_orig)
-            sample_true_orig.extend(target_orig)
-            sample_count += points.size(0)
+        train_acc = np.mean(mean_correct)
+        print(f'Train Accuracy: {train_acc:.4f}')
+        logger.info(f'Train Accuracy: {train_acc:.4f}')
 
-    accuracy = np.mean(mean_correct)
-    print('Total Accuracy: %f' % accuracy)
-    logger.info('Total Accuracy: %f' % accuracy)
-    
-    # 打印前10个样本的预测与真实标签（原始标签）
-    print("Sample predictions (original labels):")
-    for i in range(min(10, len(sample_pred_orig))):
-        print(f"Sample {i}: Predicted: {sample_pred_orig[i]}, Ground Truth: {sample_true_orig[i]}")
-    logger.info("Sample predictions (original labels): %s", str(list(zip(sample_pred_orig, sample_true_orig))))
+        acc = test(classifier, testDataLoader)
 
-    logger.info('End of evaluation...')
-    
+        if (acc >= best_tst_accuracy) and epoch > 5:
+            best_tst_accuracy = acc
+            logger.info('Saving model...')
+            save_checkpoint(global_epoch + 1, train_acc, acc, classifier, optimizer, str(checkpoints_dir), args.model_name)
+            print('Saving model...')
+        
+        end_time = time.time()
+        epoch_time = end_time - start_time
+        completion_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        print('\r Loss: %f' % loss.data)
+        logger.info('Loss: %.2f', loss.data)
+        print('\r Test Accuracy: %f   ***  Best Accuracy: %f' % (acc, best_tst_accuracy))
+        logger.info('Test Accuracy: %f  *** Best Test Accuracy: %f', acc, best_tst_accuracy)
+        logger.info(f"Epoch {epoch + 1} completed in {epoch_time:.2f}s at {completion_time}.")
+        print(f"Epoch {epoch + 1} completed in {epoch_time:.2f}s at {completion_time}.")
+
+        global_epoch += 1
+
+    logger.info(f'Training completed. Best Test Accuracy: {best_tst_accuracy:.4f}')
+    logger.info('End of training...')
+
+
 if __name__ == '__main__':
-    args = argparse.Namespace(
-        batchsize=32,
-        gpu='0',
-        checkpoint='path/to/checkpoint',
-        num_point=1024,
-        num_workers=16,
-        model_name='pointconv',
-        normal=False,
-        data_root='./data/origin1k',
-        split='test'
-    )
+    args = parse_args()
+    print(f'The train dataset path: {args.train_path}\nThe test dataset path: {args.test_path}')
     main(args)

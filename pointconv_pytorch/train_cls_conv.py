@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--num_point', type=int, default=1200, help='Point Number [default: 1024]')  # 这个点云数量根据自己的修改
     parser.add_argument('--num_workers', type=int, default=16, help='Worker Number [default: 16]')
     parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer for training')
-    parser.add_argument('--pretrain', type=str, default=None, help='whether use pretrain model')
+    parser.add_argument('--pretrain', type=str, default=None, help='whether use pretrain model')  # 是否使用预训练模型
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='decay rate of learning rate')
     parser.add_argument('--model_name', default='originnew_labbotm1k', help='model name')
     parser.add_argument('--normal', action='store_true', default=True,
@@ -42,6 +42,7 @@ def parse_args():
                         help='Directory containing unified training h5 file')
     parser.add_argument('--test_path', type=str, default=data_path,
                         help='Directory containing unified testing h5 file')
+    parser.add_argument('--checkpoint', type=str, default=None, help='Path to pre-trained model checkpoint')  # Checkpoint路径
     return parser.parse_args()
 
 
@@ -49,25 +50,27 @@ def main(args):
     '''HYPER PARAMETER'''
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    '''LOAD DATASET AND OBTAIN NUMBER OF CLASSES'''
     
-    # 直接使用新的统一 h5 文件路径加载数据
-    TRAIN_DATASET = ModelNetDataLoader(root=args.train_path, npoint=args.num_point,
-                                       split='train', normal_channel=args.normal)
+    '''数据加载和获取类别数'''
+    if args.checkpoint:
+        checkpoint = torch.load(args.checkpoint)
+        num_classes = checkpoint['num_classes']  # checkpoint是个字典
+        label_map = checkpoint['label_map']
+        logger_info = "Loaded label_map and num_classes from checkpoint."
+        # 注意：使用checkpoint时TRAIN_DATASET需提前加载用以创建DataLoader    
+        TRAIN_DATASET = ModelNetDataLoader(root=args.train_path, npoint=args.num_point, split='train', normal_channel=args.normal, label_map=label_map, num_classes=num_classes)
+    else:
+        TRAIN_DATASET = ModelNetDataLoader(root=args.train_path, npoint=args.num_point, split='train', normal_channel=args.normal)
+        num_classes = len(TRAIN_DATASET.classes)
+        label_map = TRAIN_DATASET.label_map
+        logger_info = f"Detected {num_classes} classes from training data."
+    TEST_DATASET = ModelNetDataLoader(root=args.test_path, npoint=args.num_point, split='test', normal_channel=args.normal, label_map=label_map, num_classes=num_classes)
     
-    # 直接从加载的数据中获得类别数
-    num_classes = len(TRAIN_DATASET.classes)
-    print(f'Detected {num_classes} classes.')
-    args.num_classes = num_classes
-
-    TEST_DATASET = ModelNetDataLoader(root=args.test_path, npoint=args.num_point,
-                                      split='test', normal_channel=args.normal)
-
     '''CREATE DIR'''
     experiment_dir = Path('./experiment/')
     experiment_dir.mkdir(exist_ok=True)
 
-    file_dir = Path(str(experiment_dir) + f'/{args.model_name}_classes{args.num_classes}_points{args.num_point}_' +
+    file_dir = Path(str(experiment_dir) + f'/{args.model_name}_classes{num_classes}_points{args.num_point}_' +
                     str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')))
     file_dir.mkdir(exist_ok=True)
     checkpoints_dir = file_dir.joinpath('checkpoints/')
@@ -78,18 +81,19 @@ def main(args):
     '''LOG'''
     logger = logging.getLogger(args.model_name)
     logger.setLevel(logging.INFO)
-    # 记录标签映射信息到日志
-    logger.info("Label mapping (original -> mapped): %s", str(TRAIN_DATASET.label_map))
+    
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     file_handler = logging.FileHandler(str(log_dir) + f'/train_{args.model_name}_cls.txt')
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-    logger.info(
-        '---------------------------------------------------TRANING---------------------------------------------------')
+    logger.info('---------------------------------------------------TRAINING---------------------------------------------------')
     logger.info('PARAMETER ...')
     logger.info(args)
-
+    logger.info(logger_info)
+    logger.info("Number of classes: %d", num_classes)  # 记录类别数到日志
+    logger.info("Label mapping (original -> mapped): %s", str(TRAIN_DATASET.label_map))  # 记录标签映射信息到日志
+    
     '''DATA LOADING'''
     logger.info('Load dataset ...')
 
@@ -106,13 +110,14 @@ def main(args):
         torch.cuda.manual_seed_all(seed)
 
     '''MODEL LOADING'''
-    classifier = PointConvClsSsg(args.num_classes).to(device)
+    classifier = PointConvClsSsg(num_classes, label_map).to(device)
     if args.pretrain is not None:
         logger.info('Loading pre-trained model...')
         checkpoint = torch.load(args.pretrain)
         start_epoch = checkpoint['epoch']
         classifier.load_state_dict(checkpoint['model_state_dict'])
     else:
+        logger.info('No existing model, starting training from scratch...')
         print('No existing model, starting training from scratch...')
         start_epoch = 0
 
@@ -194,7 +199,6 @@ def main(args):
         global_epoch += 1
 
     logger.info(f'Training completed. Best Test Accuracy: {best_tst_accuracy:.4f}')
-
     logger.info('End of training...')
 
 

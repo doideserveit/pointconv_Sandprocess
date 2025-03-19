@@ -324,9 +324,9 @@ def process_tif_to_eval_fps_subsets(tif_file, output_dir,
     print(f"Eval FPS subsets saved to {eval_filename}")
 
 if __name__ == '__main__':
-    tif_file = '/share/home/202321008879/data/sandlabel/origin_new.label.tif'
-    output_dir = '/share/home/202321008879/data/h5data/originnew'
-    print(torch.cuda.is_available())
+    tif_file = '/share/home/202321008879/data/sandlabel/Load1_selpar.label.tif'
+    output_dir = '/share/home/202321008879/data/h5data/load1_selpar'
+    print(f'torch.cuda.is_available:{torch.cuda.is_available()}')
 
     # 直接生成最终的 FPS 子集，并划分为训练集和测试集，同时记录并保存点云数量不足的标签
     # process_tif_to_fps_subsets(tif_file, output_dir, num_subsets=30,

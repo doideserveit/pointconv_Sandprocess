@@ -36,6 +36,10 @@ def main(args):
     '''HYPER PARAMETER'''
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
+    if args.checkpoint is None:
+        print("Please load Checkpoint to eval...")
+        sys.exit(0)
+
     '''CREATE DIR for Evaluation Results'''
     experiment_dir = Path('./eval_experiment/')
     experiment_dir.mkdir(exist_ok=True)
@@ -64,13 +68,26 @@ def main(args):
     DATA_PATH = args.data_root
     logger.info(f"Data root: {DATA_PATH}, filename: all_{args.split}_fps_subsets.h5")
 
-    TEST_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split=args.split, normal_channel=args.normal)
+    ckpt = torch.load(args.checkpoint, map_location='cuda:0')
+    num_class = ckpt['num_classes']
+    label_map = ckpt['label_map']
+    logger.info("Loaded num_classes and label_map from checkpoint")
+    TEST_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split=args.split, normal_channel=args.normal, label_map=label_map, num_classes=num_class)  
     testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batchsize, shuffle=False, num_workers=args.num_workers)
     logger.info("The number of %s data is: %d", args.split, len(TEST_DATASET))
 
     # 获取反向标签映射，用于将映射后的标签转换回原始标签
     inverse_label_map = {v: k for k, v in TEST_DATASET.label_map.items()}
-    logger.info("Inverse label mapping: %s", str(inverse_label_map))
+    if len(inverse_label_map) > 10:
+        items = list(inverse_label_map.items())
+        summary_mapping = {**dict(items[:3]),
+                           '...': '...',
+                           **dict(items[len(items)//2:len(items)//2+1]),
+                           '...2': '...',
+                           **dict(items[-3:])}
+    else:
+        summary_mapping = inverse_label_map
+    logger.info("Inverse label mapping (model output -> original): %s", str(summary_mapping))
 
     seed = 3
     torch.manual_seed(seed)
@@ -78,17 +95,13 @@ def main(args):
         torch.cuda.manual_seed_all(seed)
 
     '''MODEL LOADING'''
-    num_class = len(TEST_DATASET.classes)
-    classifier = PointConvClsSsg(num_class).cuda()
-    if args.checkpoint is not None:
-        print('Load CheckPoint...')
-        logger.info('Load CheckPoint')
-        checkpoint = torch.load(args.checkpoint, weights_only=False)
-        start_epoch = checkpoint['epoch']
-        classifier.load_state_dict(checkpoint['model_state_dict'])
-    else:
-        print('Please load Checkpoint to eval...')
-        sys.exit(0)
+    classifier = PointConvClsSsg(num_class, label_map).cuda()  # 直接使用checkpoint中信息创建模型
+    print('Load CheckPoint...')
+    logger.info('Load CheckPoint')
+    # 注意：这里使用weights_only=False加载完整信息，与DATA LOADING部分加载ckpt（仅获取num_classes和label_map）不同，两者加载内容不同，可同时保留
+    ckpt_data = torch.load(args.checkpoint, weights_only=False)
+    start_epoch = ckpt_data['epoch']
+    classifier.load_state_dict(ckpt_data['model_state_dict'])  # 载入checkpoint参数
 
     blue = lambda x: '\033[94m' + x + '\033[0m'
 
@@ -147,7 +160,7 @@ if __name__ == '__main__':
         num_workers=24,
         model_name='originnew_labbotm1k',
         normal=True,
-        data_root='./data/h5data/originnew_labbotm1k',
+        data_root='./data/h5data/load1_selpar',
         split='eval'  # h5_filename = os.path.join(self.root, f"all_{split}_fps_subsets.h5")
     )
     main(args)

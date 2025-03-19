@@ -10,7 +10,17 @@ import torch.nn.functional as F
 from utils.pointconv_util import PointConvDensitySetAbstraction
 
 class PointConvDensityClsSsg(nn.Module):
-    def __init__(self, num_classes = 40):
+    def __init__(self, num_classes = 40, label_map=None):
+        """
+        Initialize the model.
+        Args:
+            num_classes (int): Number of output classes (default 40).
+            label_map (dict): The label mapping for the dataset (optional, used for consistency when resuming from checkpoint).我改的
+        """
+        # 添加保存类别数和标签映射的信息
+        self.num_classes = num_classes
+        self.label_map = label_map
+
         super(PointConvDensityClsSsg, self).__init__()
         feature_dim = 3
         self.sa1 = PointConvDensitySetAbstraction(npoint=512, nsample=32, in_channel=feature_dim + 3, mlp=[64, 64, 128], bandwidth = 0.1, group_all=False)

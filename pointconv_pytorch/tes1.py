@@ -1,31 +1,24 @@
-import torch
-from torch_cluster import fps
-print(torch.__version__)          # PyTorch版本，如1.10.0
-print(torch.version.cuda)          # 对应的CUDA版本，如11.3（若为CPU版本显示None）
+# 示例字符串
+input_str = "917,3;674,4;760,6;775,9;799,10;723,5;776,11;941,14;635,2;" \
+"972,17;976,18;811,15;995,20;928,16;751,7;840,12;754,8;796,19;866,13;566,1;"
 
+# 第一步：按照分号分割成多个部分
+parts = input_str.split(';')
 
-def main():
-    # 生成 1000 个随机的三维点
-    num_points = 1000
-    points = torch.rand((num_points, 3), dtype=torch.float32)
-    
-    # 如果有 cuda 则使用，否则使用 cpu
-    print(f"cuda: {torch.cuda.is_available()}")
-    device = 'cuda' 
-    points = points.to(device)
-    
-    # 创建对应的 batch 信息，全部归为一个 batch
-    batch = torch.zeros(points.size(0), dtype=torch.long, device=device)
-    
-    # 设置采样比例，例如采样 10% 的点
-    ratio = 0.1
-    sampled_indices = fps(points, batch, ratio=ratio)
-    
-    print("采样后的索引个数:", sampled_indices.shape[0])
-    print("采样的索引:", sampled_indices.cpu().numpy())
+# 用于存储调换顺序后的结果
+result = []
 
-if __name__ == '__main__':
-    main()
+# 遍历每个分割出来的部分
+for part in parts:
+    # 按照逗号对每个部分再进行分割
+    elements = part.split(',')
+    # 确保这个部分正好有两个元素
+    if len(elements) == 2:
+        # 调换顺序
+        swapped = f"{elements[1]},{elements[0]}"
+        result.append(swapped)
+    else:
+        # 如果不是两个元素，可以选择忽略或者其他处理方式
+        result.append(part)
 
-
-
+print(result)
