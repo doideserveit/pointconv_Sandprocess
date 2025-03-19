@@ -77,17 +77,8 @@ def main(args):
     logger.info("The number of %s data is: %d", args.split, len(TEST_DATASET))
 
     # 获取反向标签映射，用于将映射后的标签转换回原始标签
-    inverse_label_map = {v: k for k, v in TEST_DATASET.label_map.items()}
-    if len(inverse_label_map) > 10:
-        items = list(inverse_label_map.items())
-        summary_mapping = {**dict(items[:3]),
-                           '...': '...',
-                           **dict(items[len(items)//2:len(items)//2+1]),
-                           '...2': '...',
-                           **dict(items[-3:])}
-    else:
-        summary_mapping = inverse_label_map
-    logger.info("Inverse label mapping (model output -> original): %s", str(summary_mapping))
+    inverse_label_map = {v: k for k, v in TEST_DATASET.label_map.items()}# 获取反向标签映射，用于将映射后的标签转换回原始标签
+    logger.info("Inverse label mapping (model output -> original): %s", str(inverse_label_map))
 
     seed = 3
     torch.manual_seed(seed)
@@ -98,7 +89,6 @@ def main(args):
     classifier = PointConvClsSsg(num_class, label_map).cuda()  # 直接使用checkpoint中信息创建模型
     print('Load CheckPoint...')
     logger.info('Load CheckPoint')
-    # 注意：这里使用weights_only=False加载完整信息，与DATA LOADING部分加载ckpt（仅获取num_classes和label_map）不同，两者加载内容不同，可同时保留
     ckpt_data = torch.load(args.checkpoint, weights_only=False)
     start_epoch = ckpt_data['epoch']
     classifier.load_state_dict(ckpt_data['model_state_dict'])  # 载入checkpoint参数
@@ -148,9 +138,9 @@ def main(args):
     for i in range(min(10, len(sample_pred_orig))):
         print(f"Sample {i}: Predicted: {sample_pred_orig[i]}, Ground Truth: {sample_true_orig[i]}")
     logger.info("Sample predictions (original labels): %s", str(list(zip(sample_pred_orig, sample_true_orig))))
-
     logger.info('End of evaluation...')
-    
+    print(f'log saved to {log_dir}')
+
 if __name__ == '__main__':
     args = argparse.Namespace(
         batchsize=32,

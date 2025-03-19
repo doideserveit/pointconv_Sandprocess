@@ -200,7 +200,8 @@ def main(args):
 
     logger.info(f'Training completed. Best Test Accuracy: {best_tst_accuracy:.4f}')
     logger.info('End of training...')
-
+    print(f'Training completed. Best Test Accuracy: {best_tst_accuracy:.4f}')
+    print(f'Checkpoints and logs are saved in {file_dir}')
 
 if __name__ == '__main__':
     args = parse_args()
