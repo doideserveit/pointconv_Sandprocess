@@ -138,7 +138,7 @@ def main(args):
 
 if __name__ == '__main__':
     args = argparse.Namespace(
-        batchsize=32,
+        batchsize=10,
         gpu='0',
         checkpoint='/share/home/202321008879/experiment/originnew_labbotm1k_classes1000_points1200_2025-03-19_12-38/checkpoints/originnew_labbotm1k-0.995400-0099.pth',
         num_point=1200,
@@ -149,3 +149,7 @@ if __name__ == '__main__':
         split='eval'  # h5_filename = os.path.join(self.root, f"all_{split}_fps_subsets.h5")
     )
     main(args)
+# # 原来的实现中采用了批次平均方式（mean_correct 列表的均值），这会导致当各批次样本数不相等时，不准确地反映整体准确率。
+#修改后的实现使用了全局累加的方式，将所有批次的正确样本数和总样本数汇总，然后通过总正确率进行计算，这样避免了批次内部样本数差异带来的误差。
+#原因分析： 原来的方法计算每个批次的正确率，然后取均值，当最后一个批次样本数不足时，该批次贡献的权重与其他批次不一致，导致整体准确率偏差。而新的方法直接统计整个测试集的正确个数与总样本数，保证每个样本都有相同比例的贡献，从而得到正确的准确率。
+# 所以建议调整batchsize使各批次数量相等
