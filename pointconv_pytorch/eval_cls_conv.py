@@ -137,13 +137,13 @@ def main(args):
     print("Sample predictions (original labels):")
     for i in range(min(10, len(sample_pred_orig))):
         print(f"Sample {i}: Predicted: {sample_pred_orig[i]}, Ground Truth: {sample_true_orig[i]}")
-    logger.info("Sample predictions (original labels): %s", str(list(zip(sample_pred_orig, sample_true_orig))))
+    logger.info("Sample predictions (Predicted, Ground Truth): %s", str(list(zip(sample_pred_orig, sample_true_orig))))
     logger.info('End of evaluation...')
     print(f'log saved to {log_dir}')
 
 if __name__ == '__main__':
     args = argparse.Namespace(
-        batchsize=32,
+        batchsize=50,
         gpu='0',
         checkpoint='/share/home/202321008879/experiment/originnew_labbotm1k_classes1000_points1200_2025-03-17_09-42/checkpoints/originnew_labbotm1k-1.000000-0099.pth',
         num_point=1200,

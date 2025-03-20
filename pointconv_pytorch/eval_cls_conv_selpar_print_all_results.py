@@ -132,7 +132,7 @@ def main(args):
     print("Sample predictions (original labels):")
     for i in range(len(sample_pred_orig)):  # 修改：打印所有样本而非只打印前10个
         print(f"Sample {i}: Predicted: {sample_pred_orig[i]}, Ground Truth: {sample_true_orig[i]}")
-    logger.info("Sample predictions (original labels): %s", str(list(zip(sample_pred_orig, sample_true_orig))))
+    logger.info("Sample predictions (Predicted, Ground Truth): %s", str(list(zip(sample_pred_orig, sample_true_orig))))
     logger.info('End of evaluation...')
     print(f'log saved to {log_dir}')
 
