@@ -17,7 +17,7 @@ import provider
 import numpy as np
 
 
-data_path = '/share/home/202321008879/data/h5data/originnew_labbotm1k'  # 手动修改
+data_path = '/share/home/202321008879/data/h5data/originnew'  # 手动修改
 
 def parse_args():
     '''PARAMETERS'''
@@ -31,9 +31,8 @@ def parse_args():
     parser.add_argument('--num_point', type=int, default=1200, help='Point Number [default: 1024]')  # 这个点云数量根据自己的修改
     parser.add_argument('--num_workers', type=int, default=16, help='Worker Number [default: 16]')
     parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer for training')
-    parser.add_argument('--pretrain', type=str, default=None, help='whether use pretrain model')  # 是否使用预训练模型
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='decay rate of learning rate')
-    parser.add_argument('--model_name', default='originnew_labbotm1k', help='model name')
+    parser.add_argument('--model_name', default='originnew', help='model name')
     parser.add_argument('--normal', action='store_true', default=True,
                         help='Whether to use normal information [default: False]')
     # 修改训练和测试文件路径：这里的路径为存放统一 h5 文件的目录，
@@ -42,7 +41,8 @@ def parse_args():
                         help='Directory containing unified training h5 file')
     parser.add_argument('--test_path', type=str, default=data_path,
                         help='Directory containing unified testing h5 file')
-    parser.add_argument('--checkpoint', type=str, default=None, help='Path to pre-trained model checkpoint')  # Checkpoint路径
+    parser.add_argument('--checkpoint', type=str, default='/share/home/202321008879/experiment/originnew_labbotm1k_classes24885_points1200_2025-03-24_15-02/checkpoints/originnew_labbotm1k-0.000185-0011.pth', 
+                        help='Path to checkpoint for resuming training')  # 继续训练所用的Checkpoint路径
     return parser.parse_args()
 
 
@@ -111,9 +111,8 @@ def main(args):
 
     '''MODEL LOADING'''
     classifier = PointConvClsSsg(num_classes, label_map).to(device)
-    if args.pretrain is not None:
-        logger.info('Loading pre-trained model...')
-        checkpoint = torch.load(args.pretrain)
+    if args.checkpoint is not None:
+        logger.info('Resuming training from checkpoint...')
         start_epoch = checkpoint['epoch']
         classifier.load_state_dict(checkpoint['model_state_dict'])
     else:
@@ -131,6 +130,8 @@ def main(args):
             eps=1e-08,
             weight_decay=args.decay_rate
         )
+    if args.checkpoint is not None and 'optimizer' in checkpoint:
+        optimizer.load_state_dict(checkpoint['optimizer'])
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.7)
     global_epoch = 0
     best_tst_accuracy = 0.0

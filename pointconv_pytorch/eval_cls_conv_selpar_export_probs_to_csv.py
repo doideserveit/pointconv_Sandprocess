@@ -1,0 +1,86 @@
+# 该脚本用于把selpar模型的预测概率导出为 CSV 文件，以便后续处理
+# 该脚本基于 eval_cls_conv_selpar.py 修改而来
+import argparse
+import os
+import sys
+import csv
+import numpy as np 
+import torch
+import torch.nn.functional as F
+from pathlib import Path
+from data_utils.ModelNetDataLoader import ModelNetDataLoader
+from model.pointconv import PointConvDensityClsSsg as PointConvClsSsg
+
+def parse_args():
+    parser = argparse.ArgumentParser('PointConv Eval Export CSV')
+    parser.add_argument('--batchsize', type=int, default=50, help='batch size')
+    parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
+    parser.add_argument('--checkpoint', type=str, default='/share/home/202321008879/experiment/originnew_labbotm1k_'
+                    'classes1000_points1200_2025-03-19_12-38/checkpoints/originnew_labbotm1k-0.995400-0099.pth', help='checkpoint')
+    parser.add_argument('--num_point', type=int, default=1200, help='Point Number')
+    parser.add_argument('--num_workers', type=int, default=16, help='Worker Number')
+    parser.add_argument('--model_name', default='originnew_labbotm1k_oad1selpar', help='model name')
+    parser.add_argument('--normal', action='store_true', default=True, help='Whether to use normal information')
+    parser.add_argument('--data_root', type=str, default='./data/h5data/load1_selpar', help='Root directory of the h5 data')
+    parser.add_argument('--split', type=str, default='eval', choices=['train', 'test', 'eval'], help='Dataset split to use')
+    parser.add_argument('--output_csv', type=str, default='predictions.csv', help='CSV filename to save results')
+    return parser.parse_args()
+
+def main(args):
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+    if args.checkpoint is None:
+        print("Please load Checkpoint to eval...")
+        sys.exit(0)
+        
+    # DATA LOADING
+    DATA_PATH = args.data_root
+    ckpt = torch.load(args.checkpoint, map_location='cuda:0')
+    num_class = ckpt['num_classes']
+    label_map = ckpt['label_map']
+    TEST_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split=args.split, normal_channel=args.normal, label_map=label_map, num_classes=num_class)  
+    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batchsize, shuffle=False, num_workers=args.num_workers)
+    
+    # 获取反向标签映射，按模型输出的索引排序
+    inverse_label_map = {v: k for k, v in label_map.items()}
+    ordered_labels = [inverse_label_map[i] for i in range(num_class)]
+    
+    torch.manual_seed(3)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(3)
+    
+    # MODEL LOADING
+    classifier = PointConvClsSsg(num_class, label_map).cuda()
+    ckpt_data = torch.load(args.checkpoint, map_location='cuda:0')
+    classifier.load_state_dict(ckpt_data['model_state_dict'])
+    classifier = classifier.eval()
+    
+    # 存放所有样本的预测概率，每行：[sample_id, prob_label1, prob_label2, ..., prob_labelN]
+    csv_rows = []
+    sample_id = 0
+
+    # 遍历数据，不使用进度条
+    for data in testDataLoader:
+        pointcloud, target = data
+        # target: shape (B, 1)
+        points = pointcloud.permute(0, 2, 1).cuda()
+        with torch.no_grad():
+            logits = classifier(points[:, :3, :], points[:, 3:, :])
+            probs = F.softmax(logits, dim=1)
+        probs = probs.cpu().numpy()
+        for row in probs:
+            # 转为 list，并在前面加上 sample id
+            csv_rows.append([sample_id] + list(row))
+            sample_id += 1
+    
+    # 保存 CSV 文件，对应第一行为表头
+    header = ['Sample_ID'] + ordered_labels
+    with open(args.output_csv, mode='w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(header)
+        writer.writerows(csv_rows)
+    
+    print(f"CSV file saved to: {os.path.abspath(args.output_csv)}")
+
+if __name__ == '__main__':
+    args = parse_args()
+    main(args)

@@ -108,14 +108,16 @@ def main(args):
 
     for batch_id, data in tqdm(enumerate(testDataLoader, 0), total=len(testDataLoader), smoothing=0.9):
         pointcloud, target = data
-        # target: shape (B, 1) mapped label
+        # target: shape (B, 1) mapped label, B = batchsize
         target = target[:, 0]
 
         points = pointcloud.permute(0, 2, 1)
         points, target = points.cuda(), target.cuda()
         with torch.no_grad():
             pred = classifier(points[:, :3, :], points[:, 3:, :])
-        pred_choice = pred.data.max(1)[1]
+        pred_choice = pred.data.max(1)[1]  # 在指定维度(1)(即第2维)上查找最大值, 返回一个元组, 第一个元素是一个形状为 (B,) 的张量，包含每个样本在维度 1 上的最大值。
+                                            # 第二个元素也是一个形状为 (B,) 的张量，包含每个样本最大值所在的索引，这个索引就对应着预测的类别。
+                                            # [1] 表示从这个元组中取出第二个元素，也就是每个样本最大值所在的索引。
         correct = pred_choice.eq(target.long().data).cpu().sum()
         mean_correct.append(correct.item() / float(points.size()[0]))
 
