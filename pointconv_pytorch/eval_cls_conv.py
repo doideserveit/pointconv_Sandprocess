@@ -123,13 +123,15 @@ def main(args):
 
         # 保存前几个样本的原始标签值，用于查看验证情况（反映射回原始标签）
         if sample_count < 10:
+            remaining = 10 - sample_count
             # 对当前 batch 中每个预测值（从0开始），将其转换为原始标签（从1开始）
-            pred_orig = [inverse_label_map[x.item()] for x in pred_choice]
+            pred_orig = [inverse_label_map[x.item()] for x in pred_choice[:remaining]]
             # 对当前 batch 中每个真实标签，同样转换回原始标签
-            target_orig = [inverse_label_map[x.item()] for x in target]
+            target_orig = [inverse_label_map[x.item()] for x in target[:remaining]]
             sample_pred_orig.extend(pred_orig)
             sample_true_orig.extend(target_orig)
             sample_count += points.size(0)
+            sample_count += len(pred_orig)
 
     accuracy = np.mean(mean_correct)
     print('Total Accuracy: %f' % accuracy)
@@ -145,14 +147,14 @@ def main(args):
 
 if __name__ == '__main__':
     args = argparse.Namespace(
-        batchsize=50,
+        batchsize=1000,
         gpu='0',
-        checkpoint='/share/home/202321008879/experiment/originnew_labbotm1k_classes1000_points1200_2025-03-17_09-42/checkpoints/originnew_labbotm1k-1.000000-0099.pth',
+        checkpoint='/share/home/202321008879/experiment/originnew_classes24885_points1200_2025-03-25_08-37/checkpoints/originnew-0.999622-0089.pth',
         num_point=1200,
         num_workers=24,
-        model_name='originnew_labbotm1k',
+        model_name='originnew',
         normal=True,
-        data_root='./data/h5data/load1_selpar',
+        data_root='./data/h5data/originnew',
         split='eval'  # h5_filename = os.path.join(self.root, f"all_{split}_fps_subsets.h5")
     )
     main(args)
