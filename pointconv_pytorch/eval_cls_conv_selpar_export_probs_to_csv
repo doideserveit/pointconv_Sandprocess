@@ -40,7 +40,8 @@ def main(args):
     TEST_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split=args.split, normal_channel=args.normal, label_map=label_map, num_classes=num_class)  
     testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batchsize, shuffle=False, num_workers=args.num_workers)
     
-    # 获取反向标签映射，按模型输出的索引排序
+    # 获取反向标签映射，按模型输出的索引排序(这里压根没输出标签，所以这里保存映射的代码没用)
+    # 仅用于生成 CSV 文件表头中的 ordered_labels，以确保每个概率列对应正确的标签顺序
     inverse_label_map = {v: k for k, v in label_map.items()}
     ordered_labels = [inverse_label_map[i] for i in range(num_class)]
     

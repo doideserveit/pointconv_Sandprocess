@@ -17,7 +17,7 @@ import provider
 import numpy as np
 
 
-data_path = '/share/home/202321008879/data/h5data/originnew'  # 手动修改
+data_path = '/share/home/202321008879/data/h5data/origin_ai'  # 手动修改
 
 def parse_args():
     '''PARAMETERS'''
@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument('--num_workers', type=int, default=16, help='Worker Number [default: 16]')
     parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer for training')
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='decay rate of learning rate')
-    parser.add_argument('--model_name', default='originnew', help='model name')
+    parser.add_argument('--model_name', default='originai', help='model name')
     parser.add_argument('--normal', action='store_true', default=True,
                         help='Whether to use normal information [default: False]')
     # 修改训练和测试文件路径：这里的路径为存放统一 h5 文件的目录，
@@ -41,8 +41,8 @@ def parse_args():
                         help='Directory containing unified training h5 file')
     parser.add_argument('--test_path', type=str, default=data_path,
                         help='Directory containing unified testing h5 file')
-    parser.add_argument('--checkpoint', type=str, default='/share/home/202321008879/experiment/originnew_labbotm1k_classes24885_points1200_2025-03-24_15-02/checkpoints/originnew_labbotm1k-0.000185-0011.pth', 
-                        help='Path to checkpoint for resuming training')  # 继续训练所用的Checkpoint路径
+    parser.add_argument('--checkpoint', type=str, default='/share/home/202321008879/experiment/originai_classes25333_points1200_2025-05-01_11-47/checkpoints/originai-0.999526-0085.pth', 
+                        help='Path to checkpoint for resuming training (set to None if not available)')  # 继续训练所用的Checkpoint路径
     return parser.parse_args()
 
 
@@ -115,10 +115,11 @@ def main(args):
         logger.info('Resuming training from checkpoint...')
         start_epoch = checkpoint['epoch']
         classifier.load_state_dict(checkpoint['model_state_dict'])
+        global_epoch = start_epoch    # 使用checkpoint中的epoch作为当前轮次
     else:
         logger.info('No existing model, starting training from scratch...')
         print('No existing model, starting training from scratch...')
-        start_epoch = 0
+        global_epoch = 0
 
     if args.optimizer == 'SGD':
         optimizer = torch.optim.SGD(classifier.parameters(), lr=args.learning_rate, momentum=0.9)
@@ -133,21 +134,20 @@ def main(args):
     if args.checkpoint is not None and 'optimizer' in checkpoint:
         optimizer.load_state_dict(checkpoint['optimizer'])
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.7)
-    global_epoch = 0
     best_tst_accuracy = 0.0
     blue = lambda x: '\033[94m' + x + '\033[0m'
 
     '''TRAINING'''
     logger.info('Start training...')
-    for epoch in range(start_epoch, args.epoch):
-        print(f'Epoch {global_epoch + 1} ({epoch + 1}/{args.epoch}):')
+    for epoch in range(global_epoch+1, args.epoch+1):   # 从global_epoch+1开始训练，到总轮数为args.epoch
+        print(f'Epoch {epoch} ({epoch}/{args.epoch}):')
         start_time = time.time()  # 保留总epoch计时
-        logger.info(f'Epoch {global_epoch + 1} ({epoch + 1}/{args.epoch}):')
+        logger.info(f'Epoch {epoch} ({epoch}/{args.epoch}):')
         classifier.train()
         mean_correct = []
 
         scheduler.step()
-        for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
+        for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9, dynamic_ncols=True):
             points, target = data
             points = points.detach().numpy()
 
@@ -183,8 +183,7 @@ def main(args):
         if (acc >= best_tst_accuracy) and epoch > 5:
             best_tst_accuracy = acc
             logger.info('Saving model...')
-            save_checkpoint(global_epoch + 1, train_acc, acc, classifier, optimizer, str(checkpoints_dir),
-                            args.model_name)
+            save_checkpoint(epoch, train_acc, acc, classifier, optimizer, str(checkpoints_dir), args.model_name)
             print('Saving model...')
         end_time = time.time()
         epoch_time = end_time - start_time
@@ -194,10 +193,8 @@ def main(args):
         logger.info('Loss: %.2f', loss.data)
         print('\r Test %s: %f   ***  %s: %f' % (blue('Accuracy'), acc, blue('Best Accuracy'), best_tst_accuracy))
         logger.info('Test Accuracy: %f  *** Best Test Accuracy: %f', acc, best_tst_accuracy)
-        logger.info(f"Epoch {epoch + 1} completed in {epoch_time:.2f}s at {completion_time}.")
-        print(f"Epoch {epoch + 1} completed in {epoch_time:.2f}s at {completion_time}.")
-
-        global_epoch += 1
+        logger.info(f"Epoch {epoch} completed in {epoch_time:.2f}s at {completion_time}.")
+        print(f"Epoch {epoch} completed in {epoch_time:.2f}s at {completion_time}.")
 
     logger.info(f'Training completed. Best Test Accuracy: {best_tst_accuracy:.4f}')
     logger.info('End of training...')

@@ -313,12 +313,13 @@ def process_tif_to_eval_fps_subsets(tif_file, output_dir,
 
 
 if __name__ == '__main__':
-    tif_file = 'I:/avizo-data/oldtif/Load1_selpar.label.tif'
-    output_dir = 'I:/sandprocess/data/test'
+    tif_file = '/share/home/202321008879/data/sandlabel/load1_ai_label.tif'
+    output_dir = '/share/home/202321008879/data/h5data/load1_ai'
     print(f'torch.cuda.is_available:{torch.cuda.is_available()}')
 
-    process_tif_to_fps_subsets(tif_file, output_dir, num_subsets=30,
-                               num_points_per_subset=1200, train_ratio=0.85, n_jobs=12, batch_size=5)
+    # process_tif_to_fps_subsets(tif_file, output_dir, num_subsets=30,
+    #                            num_points_per_subset=1200, train_ratio=0.85, n_jobs=8, batch_size=1000)
 
     process_tif_to_eval_fps_subsets(tif_file, output_dir, num_eval_subsets=10,
-                                    num_points_per_subset=1200, n_jobs=12, batch_size=5)
+                                    num_points_per_subset=1200, n_jobs=8, batch_size=1000)
+

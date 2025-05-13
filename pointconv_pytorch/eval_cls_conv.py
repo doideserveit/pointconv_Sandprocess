@@ -106,7 +106,8 @@ def main(args):
     sample_true_orig = []
     sample_count = 0
 
-    for batch_id, data in tqdm(enumerate(testDataLoader, 0), total=len(testDataLoader), smoothing=0.9):
+    for batch_id, data in tqdm(enumerate(testDataLoader, 0),
+                                 total=len(testDataLoader), smoothing=0.9, dynamic_ncols=True):
         pointcloud, target = data
         # target: shape (B, 1) mapped label, B = batchsize
         target = target[:, 0]
