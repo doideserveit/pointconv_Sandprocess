@@ -136,6 +136,7 @@ def get_batch_offset(output_dir, prefix):
 
 
 def save_batch_file(output_dir, prefix, batch_index, data_dict):
+    os.makedirs(output_dir, exist_ok=True)  # 确保输出目录存在
     batch_file = os.path.join(output_dir, f"{prefix}_{batch_index}.npz")
     np.savez_compressed(batch_file, **data_dict)
     print(f"Batch {batch_index} results saved to {batch_file}")
@@ -218,7 +219,7 @@ def process_label(data, label, num_subsets=30, num_points_per_subset=1200):
 
     subsets = np.array(subsets, dtype=np.float32)
     elapsed_time = time.time() - start_time
-    if label % 100 == 0:
+    if label % 1000 == 0:
         print(f"已完成第{label}号颗粒处理，用时{elapsed_time:.1f}s")
 
     return subsets, label, elapsed_time, insufficient, sampling_issues
@@ -313,13 +314,13 @@ def process_tif_to_eval_fps_subsets(tif_file, output_dir,
 
 
 if __name__ == '__main__':
-    tif_file = '/share/home/202321008879/data/sandlabel/load1_ai_label.tif'
-    output_dir = '/share/home/202321008879/data/h5data/load1_ai'
+    tif_file = '/share/home/202321008879/data/sandlabel/load15_ai_label.tif'
+    output_dir = '/share/home/202321008879/data/h5data/load15_ai'
     print(f'torch.cuda.is_available:{torch.cuda.is_available()}')
-
+    print(f'generating load15 h5...')
     # process_tif_to_fps_subsets(tif_file, output_dir, num_subsets=30,
     #                            num_points_per_subset=1200, train_ratio=0.85, n_jobs=8, batch_size=1000)
 
     process_tif_to_eval_fps_subsets(tif_file, output_dir, num_eval_subsets=10,
                                     num_points_per_subset=1200, n_jobs=8, batch_size=1000)
-
+                              

@@ -1,3 +1,4 @@
+# 计算颗粒属性（质心、体积、等效直径等）并保存为 npz 和 CSV 格式
 import os
 import numpy as np
 from tifffile import imread
@@ -179,30 +180,30 @@ def main(tif_file, output_dir, tif_name, correction_params):
     save_properties_csv(csv_output, properties)
 
 if __name__ == '__main__':
-    # all_tif_dir = '/share/home/202321008879/data/sandlabel'
-    # all_output_dir = '/share/home/202321008879/data/sand_propertities'
-   # 使用包含tif名称和对应修正坐标参数的字典列表
-    # tif_list = [
-    #     # {"name": "origin", "offset": [647.373, 644.098], "voxel_size": 0.033321},
-    #     # 可在此添加更多字典，例如:
-    #     {"name": "load1", "offset": [652.145, 651.986], "voxel_size": 0.033321},
-    #     # {"name": "load5", "offset": [687.690, 680.105], "voxel_size": 0.033321},
-    #     # {"name": "load10", "offset": [734.805, 733.713], "voxel_size": 0.033321},
-    #     # {"name": "load15", "offset": [798.219, 786.444], "voxel_size": 0.033321},
-    # ]
-    # for tif_dict in tif_list:
-    #     tif_file = os.path.join(all_tif_dir, tif_dict["name"] + '_ai_label.tif')
-    #     output_dir = os.path.join(all_output_dir, tif_dict["name"] + '_ai_particle_properties')
-    #     main(tif_file, output_dir, tif_dict["name"], correction_params=tif_dict)
-    #     print(f"Finished processing {tif_dict['name']}_ai_label.tif")
-
-    testtif_dir= '/share/home/202321008879/data/sandlabel/old'
-    base_output_dir = '/share/home/202321008879/data/sand_propertities/'
-    tif_list = [{"name": "originnew_labbotm1k", "offset": [647.373, 644.098], 'zorigin':1661, "voxel_size": 0.033321},
-                {"name": "Load1_selpar", "offset": [652.145, 651.986], 'zorigin': 1656, "voxel_size": 0.033321},
-                ]
+    all_tif_dir = '/share/home/202321008879/data/sandlabel'
+    all_output_dir = '/share/home/202321008879/data/sand_propertities'
+    #  使用包含tif名称和对应修正坐标参数的字典列表
+    tif_list = [
+        # {"name": "origin", "offset": [647.373, 644.098], "voxel_size": 0.033321},
+        # # 可在此添加更多字典，例如:
+        # {"name": "load1", "offset": [652.145, 651.986], "voxel_size": 0.033321},
+        # {"name": "load5", "offset": [687.690, 680.105], "voxel_size": 0.033321},
+        # {"name": "load10", "offset": [734.805, 733.713], "voxel_size": 0.033321},
+        {"name": "load15", "offset": [798.219, 786.444], "voxel_size": 0.033321},
+    ]
     for tif_dict in tif_list:
-        tif_file = os.path.join(testtif_dir, tif_dict["name"] + '.label.tif')
-        output_dir = os.path.join(base_output_dir, tif_dict["name"] + '_particle_properties')
+        tif_file = os.path.join(all_tif_dir, tif_dict["name"] + '_ai_label.tif')
+        output_dir = os.path.join(all_output_dir, tif_dict["name"] + '_ai_particle_properties')
         main(tif_file, output_dir, tif_dict["name"], correction_params=tif_dict)
         print(f"Finished processing {tif_dict['name']}_ai_label.tif")
+
+    # testtif_dir= '/share/home/202321008879/data/sandlabel/old'
+    # base_output_dir = '/share/home/202321008879/data/sand_propertities/'
+    # tif_list = [{"name": "originnew_labbotm1k", "offset": [647.373, 644.098], 'zorigin':1661, "voxel_size": 0.033321},
+    #             {"name": "Load1_selpar", "offset": [652.145, 651.986], 'zorigin': 1656, "voxel_size": 0.033321},
+    #             ]
+    # for tif_dict in tif_list:
+    #     tif_file = os.path.join(testtif_dir, tif_dict["name"] + '.label.tif')
+    #     output_dir = os.path.join(base_output_dir, tif_dict["name"] + '_particle_properties')
+    #     main(tif_file, output_dir, tif_dict["name"], correction_params=tif_dict)
+    #     print(f"Finished processing {tif_dict['name']}_ai_label.tif")

@@ -80,17 +80,22 @@ class ModelNetDataLoader(Dataset):
 
         # 如果提供了 label_map 和 num_classes（例如在继续训练或验证时），则直接使用
         if self.label_map is not None and self.num_classes is not None:
-            # 推理阶段，多出来的标签其实不参与神经网络计算，所以随便给个标签
             if self.infer:
+                # 推理阶段，多出来的标签其实不参与神经网络计算，所以随便给个标签
+                print("推理阶段，使用提供的标签映射，并进行修改，以适应新的标签")
                 print("修改前标签映射长度:", len(self.label_map))
                 mapped_labels = np.array([self.label_map.get(l, l) for l in orig_labels], dtype=np.int32)
                 print("修改后标签映射长度:", len(set(mapped_labels)))
+            elif split == 'test':
+                mapped_labels = np.array([self.label_map[l] for l in orig_labels], dtype=np.int32)
+                print(f"测试集加载，使用训练集生成的标签映射，标签映射长度: {len(self.label_map)}")
             else:
                 mapped_labels = np.array([self.label_map[l] for l in orig_labels], dtype=np.int32)
                 print(f'继续训练或验证，使用提供的标签映射，标签映射长度: {len(self.label_map)}')
            
         else:
             # 生成标签映射
+            print("训练新模型，自动生成标签映射")
             unique_labels = sorted(list(set(orig_labels)))
             self.label_map = {orig: idx for idx, orig in enumerate(unique_labels)}  # 保存映射关系(原始标签: 映射标签(idx，即索引))
             mapped_labels = np.array([self.label_map[l] for l in orig_labels], dtype=np.int32)  # 映射后的标签           

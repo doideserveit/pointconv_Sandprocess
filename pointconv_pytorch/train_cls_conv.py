@@ -17,7 +17,7 @@ import provider
 import numpy as np
 
 
-data_path = '/share/home/202321008879/data/h5data/origin_ai'  # 手动修改
+data_path = '/share/home/202321008879/data/h5data/load10_ai'  # 手动修改
 
 def parse_args():
     '''PARAMETERS'''
@@ -27,12 +27,12 @@ def parse_args():
     parser.add_argument('--epoch', default=100, type=int, help='number of epoch in training')  # 修改epoch从400到200或150
     parser.add_argument('--learning_rate', default=0.001, type=float,
                         help='learning rate in training')  # 修改学习率由0.001为0.01
-    parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
+    parser.add_argument('--gpu', type=str, default='1', help='specify gpu device')
     parser.add_argument('--num_point', type=int, default=1200, help='Point Number [default: 1024]')  # 这个点云数量根据自己的修改
     parser.add_argument('--num_workers', type=int, default=16, help='Worker Number [default: 16]')
     parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer for training')
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='decay rate of learning rate')
-    parser.add_argument('--model_name', default='originai', help='model name')
+    parser.add_argument('--model_name', default='load10ai', help='model name')
     parser.add_argument('--normal', action='store_true', default=True,
                         help='Whether to use normal information [default: False]')
     # 修改训练和测试文件路径：这里的路径为存放统一 h5 文件的目录，
@@ -41,7 +41,7 @@ def parse_args():
                         help='Directory containing unified training h5 file')
     parser.add_argument('--test_path', type=str, default=data_path,
                         help='Directory containing unified testing h5 file')
-    parser.add_argument('--checkpoint', type=str, default='/share/home/202321008879/experiment/originai_classes25333_points1200_2025-05-01_11-47/checkpoints/originai-0.999526-0085.pth', 
+    parser.add_argument('--checkpoint', type=str, default='/share/home/202321008879/experiment/load10ai_classes26311_points1200_2025-05-26_19-41/checkpoints/load10ai-0.000889-0025.pth', 
                         help='Path to checkpoint for resuming training (set to None if not available)')  # 继续训练所用的Checkpoint路径
     return parser.parse_args()
 
