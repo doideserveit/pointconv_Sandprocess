@@ -1,6 +1,5 @@
-# 这个脚本是主版本，该版本中origin阶段仍然分组，同时保留了diff的计算
-# 这个脚本分析各阶段的复杂网络参数（如度、聚类系数等）的分布情况，同时保存了其Rptg分组的频率分布。后续的plot_group_param_trend.py脚本会读取这些数据进行绘图。
-# 这里的cycles单独处理，只绘制环size频率分布图。同时保存了频率的csv，后面的plot_cycle_group_trend.py脚本会读取这个csv进行绘图。
+# 这个脚本是分支版本，该版本中origin阶段不分组，同时删除了diff的计算
+# 这个脚本分析各阶段的复杂网络参数（如度、聚类系数等）的分布情况
 import os
 import numpy as np
 import pandas as pd
@@ -90,55 +89,6 @@ def collect_param_by_group(groups, param_dict):
         group_param[group] = vals
     return group_param
 
-def collect_param_diff_by_group(groups, def2ref, def_param_dict, ref_param_dict):
-    """按分组收集复杂网络参数变化值（def-param - ref-param）"""
-    group_param_diff = {}
-    for group, labs in groups.items():
-        vals = []
-        for def_lab in labs:
-            ref_lab = def2ref.get(def_lab)
-            if ref_lab is not None and def_lab in def_param_dict and ref_lab in ref_param_dict:
-                try:
-                    diff = float(def_param_dict[def_lab]) - float(ref_param_dict[ref_lab])
-                    vals.append(diff)
-                except:
-                    continue
-        group_param_diff[group] = vals
-    return group_param_diff
-
-def read_cycles_npz(cycles_npz_file, sizes=[3,4,5,6]):
-    """读取cycles.npz，返回{环size: [所有环的标签（可重复）]}"""
-    data = np.load(cycles_npz_file, allow_pickle=True)
-    size_to_labels = {}
-    for size in sizes:
-        key = f"{size}_cycles"
-        if key in data:
-            # cycles: [array([label1, label2, ...]), ...]
-            cycles = data[key]
-            labels = []
-            for cycle in cycles:
-                labels.extend(list(cycle))
-            size_to_labels[size] = labels
-    return size_to_labels
-
-def collect_cycle_size_freq_by_group(groups, size_to_labels):
-    """
-    对每个rptg分组，统计该组颗粒在各环size中出现的频率（允许重复计数）。
-    返回: {group: {size: freq, ...}, ...}
-    """
-    group_cycle_freq = {}
-    for group, labs in groups.items():
-        labs_set = set(labs)
-        size_freq = {}
-        for size, labels in size_to_labels.items():
-            # 统计该组颗粒在该size环中出现的次数（允许重复）
-            count = sum(1 for lab in labels if lab in labs_set)
-            size_freq[size] = count
-        total_count = sum(size_freq.values())
-        freq_dict = {size: (size_freq[size]/total_count if total_count>0 else 0) for size in size_freq}
-        group_cycle_freq[group] = freq_dict
-    return group_cycle_freq
-
 def save_group_param_csv(group_param, output_file):
     """保存分组参数值到CSV"""
     with open(output_file, 'w') as f:
@@ -146,16 +96,6 @@ def save_group_param_csv(group_param, output_file):
         for group, vals in group_param.items():
             for v in vals:
                 f.write(f"{group},{v}\n")
-
-def save_cycle_group_freq_csv(group_cycle_freq, output_csv):
-    """
-    保存环size频率分布数据到CSV，列为group,cycle_size,frequency
-    """
-    with open(output_csv, 'w') as f:
-        f.write('group,cycle_size,frequency\n')
-        for group, freq_dict in group_cycle_freq.items():
-            for size, freq in freq_dict.items():
-                f.write(f"{group},{size},{freq}\n")
 
 def plot_kde(group_param, param_name, output_png, xlim_min=None, xlim_max=None):
     """绘制分组KDE核密度估计图，可设定x轴最小/最大值"""
@@ -194,23 +134,23 @@ def plot_kde(group_param, param_name, output_png, xlim_min=None, xlim_max=None):
 def plot_group_line(group_param, param_name, output_png, xlim_min=None, xlim_max=None):
     """
     绘制分组折线图（适合离散参数如度），可设定x轴最小/最大值
+    非origin阶段，图例标注每组百分比
     """
     plt.figure(figsize=(8,6))
     total_count = sum(len(vals) for vals in group_param.values())
     group_sizes = {group: len(vals) for group, vals in group_param.items()}
+    show_percent = len(group_param) > 1  # origin只有一个组，不显示百分比
     for group, vals in group_param.items():
         if len(vals) == 0:
             continue
-        # 直接绘制频数，这样直接比较不同分组的数量（可选）
-        # plt.plot(value_counts.index, value_counts.values, marker='o', label=group) # 直接绘制频数，这样直接比较不同分组的数量，但不方便不同阶段的比较
-        # 绘制组内的频率，比较不同组的度的百分比（可选）
-        # freq = value_counts / value_counts.sum() # 计算组内频率
-        # plt.plot(freq.index, freq.values, marker='o', label=group) # 绘制占组内的频率，比较不同组的度的百分比
         value_counts = pd.Series(vals).value_counts().sort_index()
         global_freq = value_counts / total_count # 计算全局频率
-        n = group_sizes.get(group, 0)
-        proportion = n / total_count if total_count > 0 else 0
-        label = f"{group} (n={n}, {proportion:.1%})"
+        if show_percent:
+            n = group_sizes[group]
+            proportion = n / total_count if total_count > 0 else 0
+            label = f"{group} (n={n}, {proportion:.1%})"
+        else:
+            label = group
         plt.plot(global_freq.index, global_freq.values, marker='o', label=label)
     plt.xlabel(param_name)
     plt.ylabel('Count')
@@ -222,31 +162,13 @@ def plot_group_line(group_param, param_name, output_png, xlim_min=None, xlim_max
     plt.savefig(output_png)
     plt.close()
 
-def plot_cycle_size_freq_line(group_cycle_freq, output_png):
-    """
-    绘制横轴为环size，纵轴为频率的折线图
-    """
-    plt.figure(figsize=(8,6))
-    for group, freq_dict in group_cycle_freq.items():
-        sizes = sorted(freq_dict.keys())
-        freqs = [freq_dict[size] for size in sizes]
-        plt.plot(sizes, freqs, marker='o', label=group)
-    plt.xlabel('Cycle Size')
-    plt.ylabel('Frequency')
-    plt.title('Cycle Size Frequency Distribution by RPTG Group')
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(output_png)
-    plt.close()
-
 def parser():
     """解析命令行参数（可选）"""
     import argparse
     parser = argparse.ArgumentParser(description='Analyze complex network parameters by RPTG groups.')
     parser.add_argument('--stage', type=str, required=True, help='Current stage (e.g., load1, origin)')
     parser.add_argument('--param_name', type=str, required=True, help='Complex network parameter name (e.g., degree)')
-    parser.add_argument('--bins', type=float, nargs='+', default=[0, 0.02, 0.04, 0.06], help='RPTG bins for grouping')
-    parser.add_argument('--plot_diff', action='store_true', help='Whether to plot parameter differences')
+    parser.add_argument('--bins', type=float, nargs='+', default=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6], help='RPTG bins for grouping')
     parser.add_argument('--xlim_min', type=float, default=None, help='Minimum x-axis value for plots')
     parser.add_argument('--xlim_max', type=float, default=None, help='Maximum x-axis value for plots')
     return parser.parse_args()
@@ -259,70 +181,43 @@ def main():
         stage_list.index(stage)
     except ValueError:
         raise ValueError(f"Invalid stage: {stage}. Must be one of {stage_list}.")
-    if stage == 'origin' and args.plot_diff:
-        raise ValueError("When stage is 'origin', cannot plot differences, please choose another stage.")
-    ref_stage = stage_list[stage_list.index(stage)-1]  # 参考阶段
+    ref_stage = stage_list[stage_list.index(stage)-1] if stage != 'origin' else None  # 参考阶段
     param_name = args.param_name # 复杂网络参数名
     bins = args.bins # RPTG分组区间
-    plot_diff = args.plot_diff  # 是否画参数变化值分布
     xlim_min = args.xlim_min
     xlim_max = args.xlim_max
     data_dir = '/share/home/202321008879/data'
     rptg_file = os.path.join(data_dir, 'rptg', f'load1toorigin_RPTG.csv') if stage == 'origin' else os.path.join(data_dir, 'rptg', f'{stage}to{ref_stage}_RPTG.csv')
     final_results_file = os.path.join(data_dir, 'track_results', f'load1toorigin', 'final_results.npz') if stage == 'origin' else os.path.join(data_dir, 'track_results', f'{stage}to{ref_stage}', 'final_results.npz')
+    param_file = os.path.join(data_dir, 'contact_network', stage, f'{param_name}.csv')
+    output_csv = os.path.join(data_dir, 'analysis', param_name, f'{stage}_{param_name}_by_rptg.csv')
+    output_png = os.path.join(data_dir, 'analysis', param_name, f'{stage}_{param_name}_by_rptg.png')
+    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
+    print(f"分析阶段: {stage}, 参考阶段: {ref_stage}, 参数名: {param_name}, 分组区间: {bins}")
+    print(f"使用的RPTG文件: {rptg_file}， final_results文件: {final_results_file}, 参数文件: {param_file}")
     
     # 1. 获取rptg映射
     rptg_dict = get_stage_rptg_dict(stage, rptg_file, final_results_file)
     # 2. 分组
-    groups = group_by_rptg(rptg_dict, bins)
-
-    # 如果param_name为cycles，则只绘制环size频率分布图，并保存csv
-    if param_name == "cycles":
-        print(f"分析阶段: {stage}, 参考阶段: {ref_stage}, 参数名: {param_name}, 分组区间: {bins}（仅绘制环size频率分布图）")
-        cycles_npz_file = os.path.join(data_dir, 'contact_network', stage, 'cycles.npz')
-        if not os.path.exists(cycles_npz_file):
-            print(f"未找到cycles.npz: {cycles_npz_file}，跳过环统计")
-            return
-        size_to_labels = read_cycles_npz(cycles_npz_file, sizes=[3,4,5,6])
-        group_cycle_freq = collect_cycle_size_freq_by_group(groups, size_to_labels)
-        output_cycles_png = os.path.join(data_dir, 'analysis', 'cycles', f'{stage}_cycles_freq_by_rptg.png')
-        output_cycles_csv = os.path.join(data_dir, 'analysis', 'cycles', f'{stage}_cycles_freq_by_rptg.csv')
-        plot_cycle_size_freq_line(group_cycle_freq, output_cycles_png)
-        save_cycle_group_freq_csv(group_cycle_freq, output_cycles_csv)
-        print(f"环size频率分布折线图已保存到: {output_cycles_png}")
-        print(f"环size频率分布数据已保存到: {output_cycles_csv}")
-        return
-
+    if stage == 'origin':
+        # origin阶段不分组，全部归为一组
+        groups = {'all': list(rptg_dict.keys())}
+    else:
+        groups = group_by_rptg(rptg_dict, bins)
     # 3. 读取def_lab到ref_lab映射
     def2ref = read_final_results(final_results_file)
     # 4. 读取复杂网络参数
-    param_file = os.path.join(data_dir, 'contact_network', stage, f'{param_name}.csv')
     param_dict = read_network_param(param_file)
-
-    if plot_diff:
-        # 读取参考阶段参数
-        if ref_stage is None:
-            raise ValueError(".")
-        ref_param_file = os.path.join(data_dir, 'contact_network', ref_stage, f'{param_name}.csv')
-        ref_param_dict = read_network_param(ref_param_file)
-        # 5. 按分组收集参数变化值
-        group_param = collect_param_diff_by_group(groups, def2ref, param_dict, ref_param_dict)
-        output_csv = os.path.join(data_dir, 'analysis', f'{stage}_{param_name}_diff_by_rptg.csv')
-        output_png = os.path.join(data_dir, 'analysis', f'{stage}_{param_name}_diff_by_rptg.png')
-    else:
-        # 5. 按分组收集参数值（直接用lab）
-        group_param = collect_param_by_group(groups, param_dict)
-        output_csv = os.path.join(data_dir, 'analysis', param_name, f'{stage}_{param_name}_by_rptg.csv')
-        output_png = os.path.join(data_dir, 'analysis', param_name, f'{stage}_{param_name}_by_rptg.png')
-        os.makedirs(os.path.dirname(output_csv), exist_ok=True)
+    # 5. 按分组收集参数值（直接用lab）
+    group_param = collect_param_by_group(groups, param_dict)
     # 6. 输出CSV
     save_group_param_csv(group_param, output_csv)
     print(f"分组参数值已保存到: {output_csv}")
     # 7. 绘图
-    # plot_kde(group_param, param_name if not plot_diff else f"{param_name} diff", output_png, xlim_min=xlim_min, xlim_max=xlim_max)
-    # print(f"KDE图已保存到: {output_png}")
-    plot_group_line(group_param, param_name if not plot_diff else f"{param_name} diff", output_png, xlim_min=xlim_min, xlim_max=xlim_max)
-    print(f"分组折线图已保存到: {output_png}")
+    plot_kde(group_param, param_name, output_png, xlim_min=xlim_min, xlim_max=xlim_max)
+    print(f"KDE图已保存到: {output_png}")
+    # plot_group_line(group_param, param_name, output_png, xlim_min=xlim_min, xlim_max=xlim_max)
+    # print(f"分组折线图已保存到: {output_png}")
 
 if __name__ == '__main__':
     main()

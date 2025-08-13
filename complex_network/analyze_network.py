@@ -2,6 +2,7 @@ import argparse
 import os
 import networkx as nx
 import pandas as pd
+import numpy as np
 from typing import Dict, Callable, Any, List
 
 
@@ -65,6 +66,54 @@ class NetworkAnalyzer:
         # 衡量节点到其他所有节点的平均距离，反映信息传播效率
         return nx.closeness_centrality(self.graph)
     
+    def find_cycles(self) -> Dict[int, List[List[int]]]:
+        """识别不同大小的环，先剔除孤立点和度为1的点，返回{环大小: [环节点列表, ...]}"""
+        # 创建副本以不影响原图
+        G = self.graph.copy()
+        # 剔除孤立点和度为1的点
+        remove_nodes = [n for n, d in G.degree() if d <= 1]
+        while remove_nodes:
+            G.remove_nodes_from(remove_nodes)
+            remove_nodes = [n for n, d in G.degree() if d <= 1]
+        # 统计环
+        cycles = nx.cycle_basis(G)
+        size_to_cycles = {}
+        for cycle in cycles:
+            size = len(cycle)
+            size_to_cycles.setdefault(size, []).append(cycle)
+        return size_to_cycles
+
+    def save_cycles(self, cycles_dict: Dict[int, List[List[int]]], output_dir: str) -> None:
+        """保存各种大小环的数量、颗粒label集合到CSV，并保存详细信息到npz"""
+        os.makedirs(output_dir, exist_ok=True)
+        output_csv = os.path.join(output_dir, "cycles.csv")
+        output_npz = os.path.join(output_dir, "cycles.npz")
+        rows = []
+        npz_data = {}
+        for size, cycles in sorted(cycles_dict.items()):
+            # 统计所有该大小环涉及的颗粒label（去重）
+            labels = set()
+            for cycle in cycles:
+                labels.update(cycle)
+            labels_list = sorted(labels)
+            # CSV行
+            row = {
+                "cycle_size": size,
+                "count": len(cycles),
+                "labels": ";".join(map(str, labels_list))
+            }
+            rows.append(row)
+            # npz内容
+            npz_data[f"{size}_count"] = len(cycles)
+            npz_data[f"{size}_labels"] = np.array(labels_list)
+            npz_data[f"{size}_cycles"] = np.array([np.array(cycle) for cycle in cycles], dtype=object)
+        # 保存csv
+        df = pd.DataFrame(rows, columns=["cycle_size", "count", "labels"])
+        df.to_csv(output_csv, index=False)
+        print(f"环信息已保存到 {output_csv}")
+        # 保存npz
+        np.savez(output_npz, **npz_data)
+        print(f"环详细信息已保存到 {output_npz}")
     
     def save_metric(self, metric_name: str, result: Dict[int, Any], output_dir: str) -> None:
         """保存指标计算结果到CSV文件"""
@@ -106,6 +155,7 @@ def main():
         'avg_shortest_path': analyzer.compute_avg_shortest_path,
         'betweenness': analyzer.compute_betweenness_centrality,
         'closeness': analyzer.compute_closeness_centrality,
+        'cycles': analyzer.find_cycles,  # 新增环指标
         # 可以在这里添加新的指标映射
     }
     
@@ -117,7 +167,10 @@ def main():
         if metric in metric_functions:
             print(f"\n计算指标: {metric}")
             result = metric_functions[metric]()
-            analyzer.save_metric(metric, result, args.output_dir)
+            if metric == "cycles":
+                analyzer.save_cycles(result, args.output_dir)
+            else:
+                analyzer.save_metric(metric, result, args.output_dir)
             print(f"指标 '{metric}' 计算完成")
         else:
             print(f"警告: 未知的指标 '{metric}'，已忽略")

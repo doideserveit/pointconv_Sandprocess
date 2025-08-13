@@ -141,8 +141,8 @@ def main():
     param_vals = [v for v in param_mapping.values() if not np.isnan(v)]
     # vmin = min(param_vals) if param_vals else 0
     # vmax = max(param_vals) if param_vals else 1
-    vmin =  -0.01
-    vmax = 0.01
+    vmin =  5
+    vmax = 10
 
     shape = labels_3d.shape
     if args.num_slices == 1:

@@ -61,6 +61,70 @@ def visualize_rptg_slice(slice_labels, rptg_mapping, output_file, vmin, vmax, ax
     plt.savefig(output_file, dpi=300)
     plt.close()
 
+def visualize_rptg_group_slice(slice_labels, rptg_mapping, output_file, axis_label):
+    """
+    按RPTG分组上色：0-0.02（蓝），0.02-0.04（黄），>0.04（红），label=0为白色
+    """
+    plt.figure(figsize=(10, 8))
+    # 灰度底图（label>0为灰色，label=0为白色）
+    base_img = np.ones_like(slice_labels, dtype=np.float32)  # 全白
+    base_img[slice_labels == 0] = 0  # 背景黑色
+    base_img[slice_labels > 0] = 0.5  # 颗粒区域灰色
+    masked_base = np.transpose(base_img, (1, 0))
+    plt.imshow(masked_base, cmap='gray', origin='upper')
+
+    # 分组上色
+    color_img = np.zeros(slice_labels.shape, dtype=np.uint8)
+    for label in np.unique(slice_labels):
+        if label == 0:
+            continue
+        rptg = rptg_mapping.get(label, np.nan)
+        if np.isnan(rptg):
+            continue
+        if rptg <= 0.02:
+            color_img[slice_labels == label] = 1  # 蓝
+        elif rptg <= 0.04:
+            color_img[slice_labels == label] = 2  # 黄
+        else:
+            color_img[slice_labels == label] = 3  # 红
+
+    color_img = np.transpose(color_img, (1, 0))
+    # 只对颗粒区域上色，背景不变
+    cmap = mpl.colors.ListedColormap([
+        (1, 1, 1, 0),      # 0: 透明
+        (0, 0.4, 1, 0.8),  # 1: 蓝
+        (1, 0.85, 0, 0.8), # 2: 黄
+        (1, 0, 0, 0.8)     # 3: 红
+    ])
+    im = plt.imshow(color_img, cmap=cmap, origin='upper', vmin=0, vmax=3)
+
+    # 自定义图例
+    import matplotlib.patches as mpatches
+    legend_handles = [
+        mpatches.Patch(color=(0, 0.4, 1), label='0-0.02'),
+        mpatches.Patch(color=(1, 0.85, 0), label='0.02-0.04'),
+        mpatches.Patch(color=(1, 0, 0), label='>0.04')
+    ]
+    plt.legend(handles=legend_handles, title='RPTG Group', loc='lower right')
+    plt.title('RPTG Group Visualization')
+    plt.xlabel(f'{axis_label[0]} (pixels)')
+    plt.ylabel(f'{axis_label[1]} (pixels)')
+    plt.savefig(output_file, dpi=300)
+    plt.close()
+
+def save_normalized_rptg_csv(rptg_mapping, save_dir, filename):
+    """
+    保存归一化后的RPTG到指定csv，列名为def_lab和RPTG
+    """
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, filename)
+    with open(save_path, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['def_lab', 'RPTG'])
+        for lab, val in rptg_mapping.items():
+            writer.writerow([lab, val])
+    print(f"归一化RPTG已保存到: {save_path}")
+
 def parse_args():
     parser = argparse.ArgumentParser(description="可视化每个颗粒的RPTG数据")
     parser.add_argument('--def_type', required=True, help='变形体系类型，例如 origin, load1, load5, load10, load15')
@@ -89,7 +153,7 @@ def main():
     ref_list = ['origin', 'load1', 'load5', 'load10', 'load15']
     ref_idx = ref_list.index(def_type) - 1
     ref_type = ref_list[ref_idx]
-    rptg_csv = os.path.join(args.data_dir, 'rptg', f'{def_type}to{ref_type}_RPTG.csv')
+    rptg_csv = os.path.join(args.data_dir, 'rptg_unnormalized', f'{def_type}to{ref_type}_RPTG.csv')
     if args.output_dir is None:
         sub_dir = 'rptg_rotate' if args.rotate else 'rptg'
         if args.num_slices == 1 and args.slice_idx is None:
@@ -107,7 +171,14 @@ def main():
     global_disp = 0.15 * org_sample_height
     for lab, val in rptg_mapping.items():
         rptg_mapping[lab] = val / global_disp  # 归一化RPTG值
-    
+
+    # # 保存归一化后的RPTG
+    # save_normalized_rptg_csv(
+    #     rptg_mapping,
+    #     os.path.join(args.data_dir, 'rptg'),
+    #     f'{def_type}to{ref_type}_RPTG.csv'
+    # )
+
     shape = labels_3d.shape
     if args.num_slices == 1:
         slice_indices = [args.slice_idx if args.slice_idx is not None else shape[axis_dim] // 2]
@@ -117,11 +188,12 @@ def main():
     # 统计RPTG范围
     rptg_vals = [v for v in rptg_mapping.values() if not np.isnan(v)]
     vmin = 0
-    vmax = 0.02
+    vmax = 0.06
     for idx in slice_indices:
         slice_img = get_slice_by_axis(labels_3d, axis, idx)
         output_file = os.path.join(output_dir, f"{args.def_type}rptg_{axis}_slice{idx:04d}.png")
-        visualize_rptg_slice(slice_img, rptg_mapping, output_file, vmin, vmax, axis_label)
+        visualize_rptg_slice(slice_img, rptg_mapping, output_file, vmin, vmax, axis_label)  # 原有调用，已注释
+        # visualize_rptg_group_slice(slice_img, rptg_mapping, output_file, axis_label)  # 新分组上色
         print(f"Saved: {output_file}")
 
 if __name__ == '__main__':
