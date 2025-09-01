@@ -192,8 +192,8 @@ def main():
     for idx in slice_indices:
         slice_img = get_slice_by_axis(labels_3d, axis, idx)
         output_file = os.path.join(output_dir, f"{args.def_type}rptg_{axis}_slice{idx:04d}.png")
-        visualize_rptg_slice(slice_img, rptg_mapping, output_file, vmin, vmax, axis_label)  # 原有调用，已注释
-        # visualize_rptg_group_slice(slice_img, rptg_mapping, output_file, axis_label)  # 新分组上色
+        # visualize_rptg_slice(slice_img, rptg_mapping, output_file, vmin, vmax, axis_label)  # 原有调用，已注释
+        visualize_rptg_group_slice(slice_img, rptg_mapping, output_file, axis_label)  # 按分组上色
         print(f"Saved: {output_file}")
 
 if __name__ == '__main__':
